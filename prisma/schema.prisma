@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Lab {
+  id            String   @id @default(cuid())
+  title         String
+  category      String // reseau | linux | windows | azure | securite | scripts
+  status        String   @default("brouillon") // brouillon | en_cours | termine
+  date          DateTime @default(now())
+  description   String   @default("")
+  objectives    String   @default("")
+  prerequisites String   @default("")
+  topologyNotes String   @default("")
+  configSteps   String   @default("")
+  tests         String   @default("")
+  problems      String   @default("")
+  diagnostics   String   @default("")
+  conclusion    String   @default("")
+  archived      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  addressRows AddressRow[]
+  commands    CommandBlock[]
+  attachments Attachment[]
+  equipment   LabEquipment[]
+  procedures  LabProcedure[]
+  revisions   Revision[]
+
+  @@index([category])
+  @@index([updatedAt])
+}
+
+model AddressRow {
+  id        String @id @default(cuid())
+  labId     String
+  lab       Lab    @relation(fields: [labId], references: [id], onDelete: Cascade)
+  position  Int    @default(0)
+  device    String @default("")
+  interface String @default("")
+  ip        String @default("")
+  mask      String @default("")
+  gateway   String @default("")
+  vlan      String @default("")
+  notes     String @default("")
+
+  @@index([labId])
+}
+
+model CommandBlock {
+  id          String     @id @default(cuid())
+  labId       String?
+  lab         Lab?       @relation(fields: [labId], references: [id], onDelete: Cascade)
+  procedureId String?
+  procedure   Procedure? @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  position    Int        @default(0)
+  title       String     @default("")
+  language    String     @default("cisco") // cisco | bash | powershell | azure | text
+  code        String     @default("")
+  explanation String     @default("")
+
+  @@index([labId])
+  @@index([procedureId])
+}
+
+model Attachment {
+  id          String     @id @default(cuid())
+  labId       String?
+  lab         Lab?       @relation(fields: [labId], references: [id], onDelete: Cascade)
+  procedureId String?
+  procedure   Procedure? @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  filename    String
+  storedName  String
+  mime        String
+  size        Int
+  kind        String     @default("file") // topology | capture | file
+  caption     String     @default("")
+  createdAt   DateTime   @default(now())
+
+  @@index([labId])
+  @@index([procedureId])
+}
+
+model Equipment {
+  id           String         @id @default(cuid())
+  name         String
+  type         String         @default("autre") // routeur | switch | pare-feu | serveur | poste | vm | cloud | autre
+  manufacturer String         @default("")
+  osVersion    String         @default("")
+  ipAddress    String         @default("")
+  interfaces   String         @default("")
+  vlans        String         @default("")
+  role         String         @default("")
+  notes        String         @default("")
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  labs         LabEquipment[]
+}
+
+model LabEquipment {
+  labId       String
+  equipmentId String
+  lab         Lab       @relation(fields: [labId], references: [id], onDelete: Cascade)
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@id([labId, equipmentId])
+}
+
+model Procedure {
+  id          String         @id @default(cuid())
+  title       String
+  category    String         @default("reseau")
+  platform    String         @default("cisco") // cisco | bash | powershell | azure | autre
+  description String         @default("")
+  content     String         @default("")
+  tags        String         @default("")
+  isTemplate  Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  commands    CommandBlock[]
+  attachments Attachment[]
+  labs        LabProcedure[]
+}
+
+model LabProcedure {
+  labId       String
+  procedureId String
+  lab         Lab       @relation(fields: [labId], references: [id], onDelete: Cascade)
+  procedure   Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+
+  @@id([labId, procedureId])
+}
+
+model Revision {
+  id        String   @id @default(cuid())
+  labId     String
+  lab       Lab      @relation(fields: [labId], references: [id], onDelete: Cascade)
+  summary   String
+  createdAt DateTime @default(now())
+
+  @@index([labId])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
